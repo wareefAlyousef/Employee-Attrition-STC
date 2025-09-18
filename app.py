@@ -1,17 +1,146 @@
 import dash
-from dash import dcc, html, Input, Output, State, callback_context
+from dash import dcc, html, Input, Output, State, callback_context, dash_table
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import sqlite3
 import numpy as np
 from datetime import datetime
+import plotly.figure_factory as ff
 
-# Initialize the Dash app
-app = dash.Dash(__name__)
+# Initialize Dash app
+app = dash.Dash(__name__, suppress_callback_exceptions=True)
 app.title = "Employee Attrition Dashboard"
 
-# Connect to your SQLite database
+# styling CSS 
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #f8f9fa;
+                margin: 0;
+                padding: 0;
+            }
+            .navbar {
+                background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+                padding: 15px 30px;
+                color: white;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .navbar-brand {
+                font-size: 24px;
+                font-weight: bold;
+                margin-right: 30px;
+            }
+            .nav-link {
+                color: white !important;
+                margin: 0 15px;
+                padding: 10px 15px;
+                border-radius: 5px;
+                transition: background-color 0.3s;
+            }
+            .nav-link:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            .nav-link.active {
+                background-color: rgba(255, 255, 255, 0.2);
+                font-weight: bold;
+            }
+            .card {
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            .filter-card {
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 20px;
+                margin-bottom: 30px;
+            }
+            .btn-primary {
+                background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+                border: none;
+                border-radius: 5px;
+                padding: 10px 20px;
+                color: white;
+                font-weight: bold;
+                transition: all 0.3s;
+            }
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+            .btn-success {
+                background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+                border: none;
+                border-radius: 5px;
+                padding: 10px 20px;
+                color: white;
+                font-weight: bold;
+                transition: all 0.3s;
+            }
+            .btn-success:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+            .form-control {
+                border-radius: 5px;
+                border: 1px solid #ddd;
+                padding: 10px;
+                margin-bottom: 15px;
+                width: 100%;
+            }
+            .dropdown {
+                margin-bottom: 15px;
+            }
+            .chart-container {
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            .stats-card {
+                background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+                color: white;
+                border-radius: 10px;
+                padding: 20px;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .stats-number {
+                font-size: 32px;
+                font-weight: bold;
+                margin: 10px 0;
+            }
+            .stats-label {
+                font-size: 14px;
+                opacity: 0.8;
+            }
+        </style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
+
+# Connect to database
 def get_db_connection():
     try:
         conn = sqlite3.connect('db/employee_database.db')
@@ -20,12 +149,12 @@ def get_db_connection():
         print(f"Error connecting to database: {e}")
         return None
 
-# Load data from database with proper joins
+# Load data from database
 def load_data_from_db():
     conn = get_db_connection()
     if conn:
         try:
-            # Query to join all tables based on your ER diagram
+            # query join tables
             query = """
             SELECT 
                 e.*,
@@ -50,238 +179,383 @@ def load_data_from_db():
             return pd.DataFrame()
     return pd.DataFrame()
 
-# Try to load data from database first
+# load data
 df = load_data_from_db()
 
-# If database is empty or not accessible, try to load from CSV
-if df.empty:
-    try:
-        df = pd.read_csv('data/cleanData.csv')
-        print("Successfully loaded data from data/cleanData.csv")
-        print(f"Data shape: {df.shape}")
-        print(f"Columns: {list(df.columns)}")
-    except FileNotFoundError:
-        print("Both database and CSV file not found. Creating sample data for demonstration.")
-        # Fallback to sample data
-        def generate_sample_data():
-            n = 100
-            data = {
-                'JobRole': np.random.choice(['Sales Representative', 'Research Scientist', 'Laboratory Technician', 
-                                            'Manufacturing Director', 'Healthcare Representative', 'Manager', 
-                                            'Sales Executive', 'Research Director', 'Human Resources'], n),
-                'OverTime': np.random.choice(['Yes', 'No'], n, p=[0.3, 0.7]),
-                'MaritalStatus': np.random.choice(['Single', 'Married', 'Divorced'], n, p=[0.3, 0.5, 0.2]),
-                'BusinessTravel': np.random.choice(['Travel_Frequently', 'Travel_Rarely', 'Non-Travel'], n, p=[0.2, 0.5, 0.3]),
-                'EducationField': np.random.choice(['Human Resources', 'Life Sciences', 'Medical', 'Marketing', 
-                                                   'Technical Degree', 'Other'], n),
-                'JobLevel': np.random.randint(1, 6, n),
-                'MonthlyIncome': np.random.normal(5000, 2000, n).astype(int),
-                'TotalWorkingYears': np.random.randint(0, 40, n),
-                'JobSatisfaction': np.random.randint(1, 5, n),
-                'EnvironmentSatisfaction': np.random.randint(1, 5, n),
-                'DailyRate': np.random.randint(100, 1000, n),
-                'DepartmentName': np.random.choice(['Sales', 'R&D', 'HR'], n, p=[0.4, 0.4, 0.2]),
-                'Attrition': np.random.choice(['Yes', 'No'], n, p=[0.2, 0.8])
-            }
-            return pd.DataFrame(data)
-        
-        df = generate_sample_data()
+# calculat some statistic for the dashboard
+if not df.empty:
+    total_employees = len(df)
+    attrition_rate = (df['Attrition'] == 'Yes').mean() * 100
+    avg_income = df['MonthlyIncome'].mean()
+    avg_satisfaction = df[['JobSatisfaction', 'EnvironmentSatisfaction']].mean().mean()
+else:
+    total_employees = 0
+    attrition_rate = 0
+    avg_income = 0
+    avg_satisfaction = 0
 
-# Function to get column names from database
-def get_db_columns():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("PRAGMA table_info(Employees)")
-            columns = [column[1] for column in cursor.fetchall()]
-            conn.close()
-            return columns
-        except sqlite3.Error as e:
-            print(f"Error getting column names: {e}")
-            conn.close()
-            return []
-    return []
-
-# App layout
+# app layout
 app.layout = html.Div([
-    html.H1("Employee Attrition Dashboard", style={'textAlign': 'center', 'color': '#2c3e50'}),
+    dcc.Location(id='url', refresh=False),
     
-    # Filters
+    # navigation Bar
     html.Div([
-        html.Label("Select Department:", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-        dcc.Dropdown(
-            id='dept-filter',
-            options=[{'label': dept, 'value': dept} for dept in df['DepartmentName'].unique()] if 'DepartmentName' in df.columns else [],
-            value=df['DepartmentName'].unique()[0] if 'DepartmentName' in df.columns and len(df['DepartmentName'].unique()) > 0 else '',
-            style={'width': '200px', 'display': 'inline-block', 'marginRight': '30px'}
-        )
-    ], style={'padding': '20px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px', 'marginBottom': '20px'}),
+        html.Div([
+            html.Span('Employee Attrition Dashboard', className='navbar-brand'),
+            dcc.Link('Overview', href='/', className='nav-link'),
+            dcc.Link('Employee Management', href='/employee-management', className='nav-link'),
+        ], style={'display': 'flex', 'alignItems': 'center'})
+    ], className='navbar'),
     
-    # Visualizations
+    # page content
+    html.Div(id='page-content', style={'padding': '30px'})
+])
+
+# page layout
+overview_layout = html.Div([
+    # cards
     html.Div([
-        # First row of charts
         html.Div([
-            dcc.Graph(id='jobrole-chart', style={'width': '50%', 'display': 'inline-block'}),
-            dcc.Graph(id='overtime-chart', style={'width': '50%', 'display': 'inline-block'})
-        ]),
+            html.Div([
+                html.Div(f"{total_employees:,}", className='stats-number'),
+                html.Div('Total Employees', className='stats-label')
+            ], className='stats-card'),
+        ], style={'width': '23.5%', 'display': 'inline-block', 'padding': '10px'}),
         
-        # Second row of charts
         html.Div([
-            dcc.Graph(id='maritalstatus-chart', style={'width': '50%', 'display': 'inline-block'}),
-            dcc.Graph(id='businesstravel-chart', style={'width': '50%', 'display': 'inline-block'})
-        ]),
+            html.Div([
+                html.Div(f"{attrition_rate:.1f}%", className='stats-number'),
+                html.Div('Attrition Rate', className='stats-label')
+            ], className='stats-card'),
+        ], style={'width': '23.5%', 'display': 'inline-block', 'padding': '10px'}),
         
-        # Third row of charts
         html.Div([
-            dcc.Graph(id='income-chart', style={'width': '50%', 'display': 'inline-block'}),
-            dcc.Graph(id='satisfaction-chart', style={'width': '50%', 'display': 'inline-block'})
-        ])
+            html.Div([
+                html.Div(f"${avg_income:,.0f}", className='stats-number'),
+                html.Div('Avg. Monthly Income', className='stats-label')
+            ], className='stats-card'),
+        ], style={'width': '23.5%', 'display': 'inline-block', 'padding': '10px'}),
+        
+        html.Div([
+            html.Div([
+                html.Div(f"{avg_satisfaction:.1f}/5", className='stats-number'),
+                html.Div('Avg. Satisfaction', className='stats-label')
+            ], className='stats-card'),
+        ], style={'width': '23.5%', 'display': 'inline-block', 'padding': '10px'}),
+    ], style={'marginBottom': '30px'}),
+
+    # Visualizations overall data (before filter)
+    html.Div([
+        html.H3('Overall Company Trends', style={'marginBottom': '20px', 'marginTop': '30px'}),
+        html.Div([
+            html.Div([
+                html.Div([
+                    dcc.Graph(id='overall-jobrole-chart')
+                ], className='chart-container'),
+            ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%', 'verticalAlign': 'top'}),
+            
+            html.Div([
+                html.Div([
+                    dcc.Graph(id='overall-income-chart')
+                ], className='chart-container'),
+            ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+        ]),
     ]),
     
-    # Forms section
+    # filter
     html.Div([
-        html.H2("Employee Management", style={'borderBottom': '2px solid #2c3e50', 'paddingBottom': '10px'}),
-        
-        # Add new employee form
+        html.H3('Filters', style={'marginBottom': '20px'}),
         html.Div([
-            html.H3("Add New Employee"),
             html.Div([
-                html.Label("Department"),
+                html.Label("Select Department:", style={'fontWeight': 'bold', 'marginBottom': '5px'}),
+                dcc.Dropdown(
+                    id='dept-filter',
+                    options=[{'label': dept, 'value': dept} for dept in df['DepartmentName'].unique()] if 'DepartmentName' in df.columns else [],
+                    value=df['DepartmentName'].unique()[0] if 'DepartmentName' in df.columns and len(df['DepartmentName'].unique()) > 0 else '',
+                    className='dropdown'
+                ),
+            ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%'})
+        ]),
+    ], className='filter-card'),
+
+
+    # Visualizations
+    html.Div([
+        # first row 
+        html.Div([
+            html.Div([
+                dcc.Graph(id='jobrole-chart')
+            ], className='chart-container'),
+        ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%', 'verticalAlign': 'top'}),
+        
+        html.Div([
+            html.Div([
+                dcc.Graph(id='overtime-chart')
+            ], className='chart-container'),
+        ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+    ]),
+    
+    # 2 row 
+    html.Div([
+        html.Div([
+            html.Div([
+                dcc.Graph(id='maritalstatus-chart')
+            ], className='chart-container'),
+        ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%', 'verticalAlign': 'top'}),
+        
+        html.Div([
+            html.Div([
+                dcc.Graph(id='businesstravel-chart')
+            ], className='chart-container'),
+        ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+    ]),
+    
+    # 3 row 
+    html.Div([
+        html.Div([
+            html.Div([
+                dcc.Graph(id='income-chart')
+            ], className='chart-container'),
+        ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%', 'verticalAlign': 'top'}),
+        
+        html.Div([
+            html.Div([
+                dcc.Graph(id='correlation-heatmap')
+            ], className='chart-container'),
+        ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+    ]),
+])
+
+# Employee Management page
+employee_management_layout = html.Div([
+    html.H2('Employee Management', style={'marginBottom': '30px'}),
+    
+    # add employee 
+    html.Div([
+        html.H3('Add New Employee', style={'marginBottom': '20px'}),
+        html.Div([
+            html.Div([
+                html.Label("Department", style={'fontWeight': 'bold', 'marginBottom': '5px'}),
                 dcc.Dropdown(
                     id='new-dept',
                     options=[{'label': dept, 'value': dept} for dept in df['DepartmentName'].unique()] if 'DepartmentName' in df.columns else [],
-                    style={'width': '100%', 'marginBottom': '10px'}
+                    className='form-control'
                 ),
                 
-                html.Label("Job Role"),
-                dcc.Input(id='new-jobrole', type='text', placeholder='Enter job role', style={'width': '100%', 'marginBottom': '10px'}),
+                html.Label("Job Role", style={'fontWeight': 'bold', 'marginBottom': '5px'}),
+                dcc.Input(id='new-jobrole', type='text', placeholder='Enter job role', className='form-control'),
                 
-                html.Label("Monthly Income"),
-                dcc.Input(id='new-income', type='number', placeholder='Enter monthly income', style={'width': '100%', 'marginBottom': '10px'}),
+                html.Label("Monthly Income", style={'fontWeight': 'bold', 'marginBottom': '5px'}),
+                dcc.Input(id='new-income', type='number', placeholder='Enter monthly income', className='form-control'),
                 
-                html.Label("OverTime"),
+                html.Label("OverTime", style={'fontWeight': 'bold', 'marginBottom': '5px'}),
                 dcc.Dropdown(
                     id='new-overtime',
                     options=[{'label': 'Yes', 'value': 'Yes'}, {'label': 'No', 'value': 'No'}],
-                    style={'width': '100%', 'marginBottom': '10px'}
+                    className='form-control'
                 ),
                 
-                html.Button('Add Employee', id='add-employee-btn', n_clicks=0, style={
-                    'backgroundColor': '#27ae60', 'color': 'white', 'border': 'none', 
-                    'padding': '10px 20px', 'borderRadius': '5px', 'cursor': 'pointer'
-                })
+                html.Button('Add Employee', id='add-employee-btn', n_clicks=0, className='btn-success', style={'marginTop': '10px'})
             ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
             
-            # Update employee income form
+            # update employee
             html.Div([
-                html.H3("Update Employee Income"),
-                html.Label("Employee ID"),
-                dcc.Input(id='employee-id', type='number', placeholder='Enter employee ID', style={'width': '100%', 'marginBottom': '10px'}),
+                html.H3('Update Employee Income', style={'marginBottom': '20px'}),
+                html.Label("Employee ID", style={'fontWeight': 'bold', 'marginBottom': '5px'}),
+                dcc.Input(id='employee-id', type='number', placeholder='Enter employee ID', className='form-control'),
                 
-                html.Label("New Monthly Income"),
-                dcc.Input(id='update-income', type='number', placeholder='Enter new monthly income', style={'width': '100%', 'marginBottom': '10px'}),
+                html.Label("New Monthly Income", style={'fontWeight': 'bold', 'marginBottom': '5px'}),
+                dcc.Input(id='update-income', type='number', placeholder='Enter new monthly income', className='form-control'),
                 
-                html.Button('Update Income', id='update-income-btn', n_clicks=0, style={
-                    'backgroundColor': '#3498db', 'color': 'white', 'border': 'none', 
-                    'padding': '10px 20px', 'borderRadius': '5px', 'cursor': 'pointer'
-                })
-            ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'})
+                html.Button('Update Income', id='update-income-btn', n_clicks=0, className='btn-primary', style={'marginTop': '10px'})
+            ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
         ]),
         
-        html.Div(id='form-output', style={'marginTop': '20px', 'padding': '10px', 'borderRadius': '5px'})
-    ], style={'marginTop': '40px', 'padding': '20px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'})
+        html.Div(id='form-output', style={'marginTop': '20px', 'padding': '15px', 'borderRadius': '5px', 'backgroundColor': '#f8f9fa'})
+    ], className='card'),
+    
+    # Employee List
+    html.Div([
+        html.H3('Employee List', style={'marginBottom': '20px'}),
+        html.Div(id='employee-table-container')
+    ], className='card', style={'marginTop': '30px'}),
 ])
 
-# Callbacks for visualizations
+# switch between pages
+@app.callback(
+    Output('page-content', 'children'),
+    [Input('url', 'pathname')]
+)
+def display_page(pathname):
+    if pathname == '/employee-management':
+        return employee_management_layout
+    else:
+        return overview_layout
+
+# callbacks for visualization
 @app.callback(
     [Output('jobrole-chart', 'figure'),
      Output('overtime-chart', 'figure'),
      Output('maritalstatus-chart', 'figure'),
      Output('businesstravel-chart', 'figure'),
      Output('income-chart', 'figure'),
-     Output('satisfaction-chart', 'figure')],
+     Output('correlation-heatmap', 'figure'),
+     Output('overall-jobrole-chart', 'figure'),
+     Output('overall-income-chart', 'figure')],
     [Input('dept-filter', 'value')]
 )
 def update_charts(selected_dept):
-    # Filter data based on department
+    # filter department
     if selected_dept and 'DepartmentName' in df.columns:
         filtered_df = df[df['DepartmentName'] == selected_dept]
     else:
         filtered_df = df
     
-    # Job Role chart
+    # job role
     if 'JobRole' in filtered_df.columns and 'Attrition' in filtered_df.columns:
         jobrole_attrition = filtered_df.groupby('JobRole')['Attrition'].apply(lambda x: (x == 'Yes').mean() * 100).reset_index()
         jobrole_attrition.columns = ['JobRole', 'AttritionRate']
         jobrole_fig = px.bar(jobrole_attrition, x='JobRole', y='AttritionRate', 
                              title='Attrition Rate by Job Role',
-                             labels={'AttritionRate': 'Attrition Rate (%)', 'JobRole': 'Job Role'})
-        jobrole_fig.update_layout(showlegend=False)
+                             labels={'AttritionRate': 'Attrition Rate (%)', 'JobRole': 'Job Role'},
+                             color='AttritionRate',
+                             color_continuous_scale='Blues')
+        jobrole_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         jobrole_fig = go.Figure()
         jobrole_fig.add_annotation(text="JobRole or Attrition data not available", x=0.5, y=0.5, showarrow=False)
     
-    # Overtime chart
+    # overtime 
     if 'OverTime' in filtered_df.columns and 'Attrition' in filtered_df.columns:
         overtime_attrition = filtered_df.groupby('OverTime')['Attrition'].apply(lambda x: (x == 'Yes').mean() * 100).reset_index()
         overtime_attrition.columns = ['OverTime', 'AttritionRate']
         overtime_fig = px.bar(overtime_attrition, x='OverTime', y='AttritionRate', 
                               title='Attrition Rate by Overtime',
-                              labels={'AttritionRate': 'Attrition Rate (%)', 'OverTime': 'Overtime'})
-        overtime_fig.update_layout(showlegend=False)
+                              labels={'AttritionRate': 'Attrition Rate (%)', 'OverTime': 'Overtime'},
+                              color='OverTime',
+                              color_discrete_map={'Yes': '#e74c3c', 'No': '#2ecc71'})
+        overtime_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         overtime_fig = go.Figure()
         overtime_fig.add_annotation(text="OverTime or Attrition data not available", x=0.5, y=0.5, showarrow=False)
     
-    # Marital Status chart
+    # mearital states 
     if 'MaritalStatus' in filtered_df.columns and 'Attrition' in filtered_df.columns:
         marital_attrition = filtered_df.groupby('MaritalStatus')['Attrition'].apply(lambda x: (x == 'Yes').mean() * 100).reset_index()
         marital_attrition.columns = ['MaritalStatus', 'AttritionRate']
         marital_fig = px.bar(marital_attrition, x='MaritalStatus', y='AttritionRate', 
                              title='Attrition Rate by Marital Status',
-                             labels={'AttritionRate': 'Attrition Rate (%)', 'MaritalStatus': 'Marital Status'})
-        marital_fig.update_layout(showlegend=False)
+                             labels={'AttritionRate': 'Attrition Rate (%)', 'MaritalStatus': 'Marital Status'},
+                             color='MaritalStatus',
+                             color_discrete_map={'Single': '#3498db', 'Married': '#2ecc71', 'Divorced': '#e74c3c'})
+        marital_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         marital_fig = go.Figure()
         marital_fig.add_annotation(text="MaritalStatus or Attrition data not available", x=0.5, y=0.5, showarrow=False)
     
-    # Business Travel chart
+    # business travel 
     if 'BusinessTravel' in filtered_df.columns and 'Attrition' in filtered_df.columns:
         travel_attrition = filtered_df.groupby('BusinessTravel')['Attrition'].apply(lambda x: (x == 'Yes').mean() * 100).reset_index()
         travel_attrition.columns = ['BusinessTravel', 'AttritionRate']
         travel_fig = px.bar(travel_attrition, x='BusinessTravel', y='AttritionRate', 
                             title='Attrition Rate by Business Travel',
-                            labels={'AttritionRate': 'Attrition Rate (%)', 'BusinessTravel': 'Business Travel'})
-        travel_fig.update_layout(showlegend=False)
+                            labels={'AttritionRate': 'Attrition Rate (%)', 'BusinessTravel': 'Business Travel'},
+                            color='BusinessTravel',
+                            color_discrete_map={'Travel_Frequently': '#e74c3c', 'Travel_Rarely': '#f39c12', 'Non-Travel': '#2ecc71'})
+        travel_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         travel_fig = go.Figure()
         travel_fig.add_annotation(text="BusinessTravel or Attrition data not available", x=0.5, y=0.5, showarrow=False)
     
-    # Income distribution chart
+    # income distributionn 
     if 'MonthlyIncome' in filtered_df.columns and 'Attrition' in filtered_df.columns:
         income_fig = px.violin(filtered_df, x='Attrition', y='MonthlyIncome', 
-                               title='Income Distribution by Attrition Status')
+                               title='Income Distribution by Attrition Status',
+                               color='Attrition',
+                               color_discrete_map={'Yes': '#e74c3c', 'No': '#2ecc71'})
+        income_fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         income_fig = go.Figure()
         income_fig.add_annotation(text="MonthlyIncome or Attrition data not available", x=0.5, y=0.5, showarrow=False)
     
-    # Satisfaction chart
-    if all(col in filtered_df.columns for col in ['JobSatisfaction', 'EnvironmentSatisfaction', 'Attrition']):
-        satisfaction_data = filtered_df[filtered_df['Attrition'] == 'Yes']
-        satisfaction_fig = go.Figure()
-        satisfaction_fig.add_trace(go.Box(y=satisfaction_data['JobSatisfaction'], name='Job Satisfaction', boxpoints='all'))
-        satisfaction_fig.add_trace(go.Box(y=satisfaction_data['EnvironmentSatisfaction'], name='Environment Satisfaction', boxpoints='all'))
-        satisfaction_fig.update_layout(title='Satisfaction Scores for Employees with Attrition')
-    else:
-        satisfaction_fig = go.Figure()
-        satisfaction_fig.add_annotation(text="Satisfaction data not available", x=0.5, y=0.5, showarrow=False)
-    
-    return jobrole_fig, overtime_fig, marital_fig, travel_fig, income_fig, satisfaction_fig
+    # Corr heatmap 
+    numeric_columns = ['Age', 'MonthlyIncome', 'TotalWorkingYears', 'JobLevel', 
+                    'JobSatisfaction', 'EnvironmentSatisfaction', 'DailyRate']
 
-# Callback for form submissions
+    if all(col in df.columns for col in numeric_columns + ['Attrition']):
+        df_numeric = df[numeric_columns + ['Attrition']].copy()
+        df_numeric['Attrition'] = df_numeric['Attrition'].map({'Yes': 1, 'No': 0})
+        corr_matrix = df_numeric.corr()
+        
+        heatmap_fig = go.Figure(data=go.Heatmap(
+            z=corr_matrix.values,
+            x=corr_matrix.columns.tolist(),
+            y=corr_matrix.index.tolist(),
+            colorscale='RdBu_r',
+            zmin=-1,
+            zmax=1,
+            hoverongaps=False,
+        ))
+        
+        heatmap_fig.update_layout(
+            title='Correlation Matrix of Key Features',
+            xaxis_title="Features",
+            yaxis_title="Features",
+            width=600,
+            height=600,
+            plot_bgcolor='rgba(0,0,0,0)', 
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
+        annotations = []
+        for i, row in enumerate(corr_matrix.values):
+            for j, value in enumerate(row):
+                annotations.append(
+                    dict(
+                        x=corr_matrix.columns[j],
+                        y=corr_matrix.index[i],
+                        text=str(round(value, 2)),
+                        showarrow=False,
+                        font=dict(color='white' if abs(value) > 0.5 else 'black')
+                    )
+                )
+        heatmap_fig.update_layout(annotations=annotations)
+        
+    else:
+        heatmap_fig = go.Figure()
+        heatmap_fig.add_annotation(text="Required data not available for correlation matrix", x=0.5, y=0.5, showarrow=False)
+    
+    #  job role  (before filter)
+    if 'JobRole' in df.columns and 'Attrition' in df.columns:
+        overall_jobrole_attrition = df.groupby('JobRole')['Attrition'].apply(lambda x: (x == 'Yes').mean() * 100).reset_index()
+        overall_jobrole_attrition.columns = ['JobRole', 'AttritionRate']
+        overall_jobrole_fig = px.bar(overall_jobrole_attrition, x='JobRole', y='AttritionRate', 
+                                     title='Overall Attrition Rate by Job Role (Company-wide)',
+                                     labels={'AttritionRate': 'Attrition Rate (%)', 'JobRole': 'Job Role'},
+                                     color='AttritionRate',
+                                     color_continuous_scale='Reds')
+        overall_jobrole_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    else:
+        overall_jobrole_fig = go.Figure()
+        overall_jobrole_fig.add_annotation(text="JobRole or Attrition data not available", x=0.5, y=0.5, showarrow=False)
+    
+    # income distribution (before filter)
+    if 'MonthlyIncome' in df.columns and 'Attrition' in df.columns:
+        overall_income_fig = px.violin(df, x='Attrition', y='MonthlyIncome', 
+                                       title='Overall Income Distribution by Attrition Status (Company-wide)',
+                                       color='Attrition',
+                                       color_discrete_map={'Yes': '#e74c3c', 'No': '#2ecc71'})
+        overall_income_fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    else:
+        overall_income_fig = go.Figure()
+        overall_income_fig.add_annotation(text="MonthlyIncome or Attrition data not available", x=0.5, y=0.5, showarrow=False)
+    
+    return (jobrole_fig, overtime_fig, marital_fig, travel_fig, income_fig, 
+            heatmap_fig, overall_jobrole_fig, overall_income_fig)
+
+# callback submit
 @app.callback(
-    Output('form-output', 'children'),
+    [Output('form-output', 'children'),
+     Output('employee-table-container', 'children')],
     [Input('add-employee-btn', 'n_clicks'),
      Input('update-income-btn', 'n_clicks')],
     [State('new-dept', 'value'),
@@ -294,39 +568,35 @@ def update_charts(selected_dept):
 def handle_form_submissions(add_clicks, update_clicks, new_dept, new_jobrole, new_income, new_overtime, emp_id, update_income):
     ctx = callback_context
     if not ctx.triggered:
-        return ""
+        return "", get_employee_table()
     
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
     if button_id == 'add-employee-btn' and add_clicks > 0:
-        # Validate inputs
+        # vlidate input
         if not all([new_dept, new_jobrole, new_income, new_overtime]):
-            return html.Div("Please fill all fields", style={'color': 'red'})
+            return html.Div("Please fill all fields", style={'color': 'red'}), get_employee_table()
         
-        # Add to database
+        # add to database
         try:
             conn = get_db_connection()
             if conn:
                 c = conn.cursor()
                 
-                # First, get the DepartmentID for the selected department
                 c.execute("SELECT DepartmentID FROM Departments WHERE DepartmentName = ?", (new_dept,))
                 dept_result = c.fetchone()
                 if not dept_result:
-                    return html.Div("Department not found in database", style={'color': 'red'})
+                    return html.Div("Department not found in database", style={'color': 'red'}), get_employee_table()
                 department_id = dept_result[0]
                 
-                # Get or create JobID
                 c.execute("SELECT JobID FROM Jobs WHERE JobRole = ?", (new_jobrole,))
                 job_result = c.fetchone()
                 if job_result:
                     job_id = job_result[0]
                 else:
-                    # Create a new job entry if it doesn't exist
                     c.execute("INSERT INTO Jobs (JobRole, JobLevel) VALUES (?, 1)", (new_jobrole,))
                     job_id = c.lastrowid
-                
-                # Insert into Employees table
+
                 c.execute('''INSERT INTO Employees (DepartmentID, JobID, MonthlyIncome, OverTime) 
                              VALUES (?, ?, ?, ?)''', 
                          (department_id, job_id, new_income, new_overtime))
@@ -334,42 +604,94 @@ def handle_form_submissions(add_clicks, update_clicks, new_dept, new_jobrole, ne
                 conn.commit()
                 conn.close()
                 
-                return html.Div("Employee added successfully!", style={'color': 'green'})
+                return html.Div("Employee added successfully!", style={'color': 'green'}), get_employee_table()
             else:
-                return html.Div("Database connection failed", style={'color': 'red'})
+                return html.Div("Database connection failed", style={'color': 'red'}), get_employee_table()
         except Exception as e:
-            return html.Div(f"Error: {str(e)}", style={'color': 'red'})
+            return html.Div(f"Error: {str(e)}", style={'color': 'red'}), get_employee_table()
     
     elif button_id == 'update-income-btn' and update_clicks > 0:
-        # Validate inputs
+
         if not all([emp_id, update_income]):
-            return html.Div("Please provide both Employee ID and new income", style={'color': 'red'})
+            return html.Div("Please provide both Employee ID and new income", style={'color': 'red'}), get_employee_table()
         
-        # Update database
         try:
             conn = get_db_connection()
             if conn:
                 c = conn.cursor()
                 
-                # Check if employee exists
+                # check if employee exists
                 c.execute('SELECT EmployeeID FROM Employees WHERE EmployeeID = ?', (emp_id,))
                 if not c.fetchone():
-                    return html.Div("Employee ID not found", style={'color': 'red'})
-                
-                # Update income
+                    return html.Div("Employee ID not found", style={'color': 'red'}), get_employee_table()
+
+                # update income
                 c.execute('''UPDATE Employees SET MonthlyIncome = ? 
                              WHERE EmployeeID = ?''', (update_income, emp_id))
                 
                 conn.commit()
                 conn.close()
                 
-                return html.Div("Income updated successfully!", style={'color': 'green'})
+                return html.Div("Income updated successfully!", style={'color': 'green'}), get_employee_table()
             else:
-                return html.Div("Database connection failed", style={'color': 'red'})
+                return html.Div("Database connection failed", style={'color': 'red'}), get_employee_table()
         except Exception as e:
-            return html.Div(f"Error: {str(e)}", style={'color': 'red'})
+            return html.Div(f"Error: {str(e)}", style={'color': 'red'}), get_employee_table()
     
-    return ""
+    return "", get_employee_table()
+
+# def get employee table
+def get_employee_table():
+    conn = get_db_connection()
+    if conn:
+        try:
+            query = """
+            SELECT 
+                e.EmployeeID,
+                e.Age,
+                e.Gender,
+                e.MaritalStatus,
+                d.DepartmentName,
+                j.JobRole,
+                e.MonthlyIncome,
+                e.OverTime,
+                e.Attrition
+            FROM Employees e
+            LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN Jobs j ON e.JobID = j.JobID
+            LIMIT 50
+            """
+            employees_df = pd.read_sql_query(query, conn)
+            conn.close()
+            
+            if employees_df.empty:
+                return html.Div("No employees found in database")
+            
+            return dash_table.DataTable(
+                id='employee-table',
+                columns=[{"name": i, "id": i} for i in employees_df.columns],
+                data=employees_df.to_dict('records'),
+                style_table={'overflowX': 'auto'},
+                style_header={
+                    'backgroundColor': '#2c3e50',
+                    'color': 'white',
+                    'fontWeight': 'bold'
+                },
+                style_cell={
+                    'textAlign': 'left',
+                    'padding': '10px',
+                    'minWidth': '100px'
+                },
+                style_data_conditional=[
+                    {
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': '#f8f9fa'
+                    }
+                ]
+            )
+        except Exception as e:
+            return html.Div(f"Error loading employee data: {str(e)}")
+    return html.Div("Database connection failed")
 
 if __name__ == '__main__':
     app.run(debug=True)
