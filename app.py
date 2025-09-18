@@ -11,38 +11,7 @@ from datetime import datetime
 app = dash.Dash(__name__)
 app.title = "Employee Attrition Dashboard"
 
-# Load data from your CSV file
-try:
-    df = pd.read_csv('data/cleanData.csv')
-    print("Successfully loaded data from data/cleanData.csv")
-except FileNotFoundError:
-    print("CSV file not found. Creating sample data for demonstration.")
-    # Fallback to sample data if CSV not found
-    def generate_sample_data():
-        n = 100
-        data = {
-            'JobRole': np.random.choice(['Sales Representative', 'Research Scientist', 'Laboratory Technician', 
-                                        'Manufacturing Director', 'Healthcare Representative', 'Manager', 
-                                        'Sales Executive', 'Research Director', 'Human Resources'], n),
-            'OverTime': np.random.choice(['Yes', 'No'], n, p=[0.3, 0.7]),
-            'MaritalStatus': np.random.choice(['Single', 'Married', 'Divorced'], n, p=[0.3, 0.5, 0.2]),
-            'BusinessTravel': np.random.choice(['Travel_Frequently', 'Travel_Rarely', 'Non-Travel'], n, p=[0.2, 0.5, 0.3]),
-            'EducationField': np.random.choice(['Human Resources', 'Life Sciences', 'Medical', 'Marketing', 
-                                               'Technical Degree', 'Other'], n),
-            'JobLevel': np.random.randint(1, 6, n),
-            'MonthlyIncome': np.random.normal(5000, 2000, n).astype(int),
-            'TotalWorkingYears': np.random.randint(0, 40, n),
-            'JobSatisfaction': np.random.randint(1, 5, n),
-            'EnvironmentSatisfaction': np.random.randint(1, 5, n),
-            'DailyRate': np.random.randint(100, 1000, n),
-            'Department': np.random.choice(['Sales', 'R&D', 'HR'], n, p=[0.4, 0.4, 0.2]),
-            'Attrition': np.random.choice(['Yes', 'No'], n, p=[0.2, 0.8])
-        }
-        return pd.DataFrame(data)
-    
-    df = generate_sample_data()
-
-# Connect to SQLite database
+# Connect to your SQLite database
 def get_db_connection():
     try:
         conn = sqlite3.connect('db/employee_database.db')
@@ -51,19 +20,72 @@ def get_db_connection():
         print(f"Error connecting to database: {e}")
         return None
 
-# Function to get employee data from database
-def get_employees_from_db():
+# Load data from database with proper joins
+def load_data_from_db():
     conn = get_db_connection()
     if conn:
         try:
-            employees_df = pd.read_sql_query("SELECT * FROM employees", conn)
+            # Query to join all tables based on your ER diagram
+            query = """
+            SELECT 
+                e.*,
+                d.DepartmentName,
+                j.JobRole,
+                j.JobLevel,
+                ef.FieldName as EducationField
+            FROM Employees e
+            LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN Jobs j ON e.JobID = j.JobID
+            LEFT JOIN EducationFields ef ON e.EducationFieldID = ef.EducationFieldID
+            """
+            df = pd.read_sql_query(query, conn)
             conn.close()
-            return employees_df
+            print("Successfully loaded data from database")
+            print(f"Data shape: {df.shape}")
+            print(f"Columns: {list(df.columns)}")
+            return df
         except sqlite3.Error as e:
             print(f"Error reading from database: {e}")
             conn.close()
             return pd.DataFrame()
     return pd.DataFrame()
+
+# Try to load data from database first
+df = load_data_from_db()
+
+# If database is empty or not accessible, try to load from CSV
+if df.empty:
+    try:
+        df = pd.read_csv('data/cleanData.csv')
+        print("Successfully loaded data from data/cleanData.csv")
+        print(f"Data shape: {df.shape}")
+        print(f"Columns: {list(df.columns)}")
+    except FileNotFoundError:
+        print("Both database and CSV file not found. Creating sample data for demonstration.")
+        # Fallback to sample data
+        def generate_sample_data():
+            n = 100
+            data = {
+                'JobRole': np.random.choice(['Sales Representative', 'Research Scientist', 'Laboratory Technician', 
+                                            'Manufacturing Director', 'Healthcare Representative', 'Manager', 
+                                            'Sales Executive', 'Research Director', 'Human Resources'], n),
+                'OverTime': np.random.choice(['Yes', 'No'], n, p=[0.3, 0.7]),
+                'MaritalStatus': np.random.choice(['Single', 'Married', 'Divorced'], n, p=[0.3, 0.5, 0.2]),
+                'BusinessTravel': np.random.choice(['Travel_Frequently', 'Travel_Rarely', 'Non-Travel'], n, p=[0.2, 0.5, 0.3]),
+                'EducationField': np.random.choice(['Human Resources', 'Life Sciences', 'Medical', 'Marketing', 
+                                                   'Technical Degree', 'Other'], n),
+                'JobLevel': np.random.randint(1, 6, n),
+                'MonthlyIncome': np.random.normal(5000, 2000, n).astype(int),
+                'TotalWorkingYears': np.random.randint(0, 40, n),
+                'JobSatisfaction': np.random.randint(1, 5, n),
+                'EnvironmentSatisfaction': np.random.randint(1, 5, n),
+                'DailyRate': np.random.randint(100, 1000, n),
+                'DepartmentName': np.random.choice(['Sales', 'R&D', 'HR'], n, p=[0.4, 0.4, 0.2]),
+                'Attrition': np.random.choice(['Yes', 'No'], n, p=[0.2, 0.8])
+            }
+            return pd.DataFrame(data)
+        
+        df = generate_sample_data()
 
 # Function to get column names from database
 def get_db_columns():
@@ -71,7 +93,7 @@ def get_db_columns():
     if conn:
         try:
             cursor = conn.cursor()
-            cursor.execute("PRAGMA table_info(employees)")
+            cursor.execute("PRAGMA table_info(Employees)")
             columns = [column[1] for column in cursor.fetchall()]
             conn.close()
             return columns
@@ -90,21 +112,9 @@ app.layout = html.Div([
         html.Label("Select Department:", style={'fontWeight': 'bold', 'marginRight': '10px'}),
         dcc.Dropdown(
             id='dept-filter',
-            options=[{'label': dept, 'value': dept} for dept in df['Department'].unique()],
-            value=df['Department'].unique()[0] if len(df['Department'].unique()) > 0 else '',
+            options=[{'label': dept, 'value': dept} for dept in df['DepartmentName'].unique()] if 'DepartmentName' in df.columns else [],
+            value=df['DepartmentName'].unique()[0] if 'DepartmentName' in df.columns and len(df['DepartmentName'].unique()) > 0 else '',
             style={'width': '200px', 'display': 'inline-block', 'marginRight': '30px'}
-        ),
-        
-        html.Label("Sort By:", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-        dcc.Dropdown(
-            id='sort-filter',
-            options=[
-                {'label': 'Attrition Rate', 'value': 'Attrition'},
-                {'label': 'Monthly Income', 'value': 'MonthlyIncome'},
-                {'label': 'Job Level', 'value': 'JobLevel'}
-            ],
-            value='Attrition',
-            style={'width': '200px', 'display': 'inline-block'}
         )
     ], style={'padding': '20px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px', 'marginBottom': '20px'}),
     
@@ -140,7 +150,7 @@ app.layout = html.Div([
                 html.Label("Department"),
                 dcc.Dropdown(
                     id='new-dept',
-                    options=[{'label': dept, 'value': dept} for dept in df['Department'].unique()],
+                    options=[{'label': dept, 'value': dept} for dept in df['DepartmentName'].unique()] if 'DepartmentName' in df.columns else [],
                     style={'width': '100%', 'marginBottom': '10px'}
                 ),
                 
@@ -191,13 +201,12 @@ app.layout = html.Div([
      Output('businesstravel-chart', 'figure'),
      Output('income-chart', 'figure'),
      Output('satisfaction-chart', 'figure')],
-    [Input('dept-filter', 'value'),
-     Input('sort-filter', 'value')]
+    [Input('dept-filter', 'value')]
 )
-def update_charts(selected_dept, sort_by):
+def update_charts(selected_dept):
     # Filter data based on department
-    if selected_dept and 'Department' in df.columns:
-        filtered_df = df[df['Department'] == selected_dept]
+    if selected_dept and 'DepartmentName' in df.columns:
+        filtered_df = df[df['DepartmentName'] == selected_dept]
     else:
         filtered_df = df
     
@@ -300,16 +309,27 @@ def handle_form_submissions(add_clicks, update_clicks, new_dept, new_jobrole, ne
             if conn:
                 c = conn.cursor()
                 
-                # Get column names to construct proper INSERT statement
-                columns = get_db_columns()
-                if columns:
-                    # Create placeholders for the columns we're inserting
-                    placeholders = ', '.join(['?' for _ in range(4)])
-                    column_names = 'Department, JobRole, MonthlyIncome, OverTime'
-                    
-                    c.execute(f'''INSERT INTO employees ({column_names}) 
-                                 VALUES ({placeholders})''', 
-                             (new_dept, new_jobrole, new_income, new_overtime))
+                # First, get the DepartmentID for the selected department
+                c.execute("SELECT DepartmentID FROM Departments WHERE DepartmentName = ?", (new_dept,))
+                dept_result = c.fetchone()
+                if not dept_result:
+                    return html.Div("Department not found in database", style={'color': 'red'})
+                department_id = dept_result[0]
+                
+                # Get or create JobID
+                c.execute("SELECT JobID FROM Jobs WHERE JobRole = ?", (new_jobrole,))
+                job_result = c.fetchone()
+                if job_result:
+                    job_id = job_result[0]
+                else:
+                    # Create a new job entry if it doesn't exist
+                    c.execute("INSERT INTO Jobs (JobRole, JobLevel) VALUES (?, 1)", (new_jobrole,))
+                    job_id = c.lastrowid
+                
+                # Insert into Employees table
+                c.execute('''INSERT INTO Employees (DepartmentID, JobID, MonthlyIncome, OverTime) 
+                             VALUES (?, ?, ?, ?)''', 
+                         (department_id, job_id, new_income, new_overtime))
                 
                 conn.commit()
                 conn.close()
@@ -332,13 +352,13 @@ def handle_form_submissions(add_clicks, update_clicks, new_dept, new_jobrole, ne
                 c = conn.cursor()
                 
                 # Check if employee exists
-                c.execute('SELECT id FROM employees WHERE id = ?', (emp_id,))
+                c.execute('SELECT EmployeeID FROM Employees WHERE EmployeeID = ?', (emp_id,))
                 if not c.fetchone():
                     return html.Div("Employee ID not found", style={'color': 'red'})
                 
                 # Update income
-                c.execute('''UPDATE employees SET MonthlyIncome = ?, updated_at = CURRENT_TIMESTAMP 
-                             WHERE id = ?''', (update_income, emp_id))
+                c.execute('''UPDATE Employees SET MonthlyIncome = ? 
+                             WHERE EmployeeID = ?''', (update_income, emp_id))
                 
                 conn.commit()
                 conn.close()
