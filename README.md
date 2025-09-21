@@ -113,6 +113,18 @@ The dashboard provides actionable insights into employee attrition patterns, hel
 - Monitor the effectiveness of HR initiatives
 - Make data-driven decisions about workforce management
 
+## Author & Acknowledgments
+
+### Author:
+- Waref Alyousef
+
+### Acknowledgments:
+
+This project uses the IBM HR Analytics Employee Attrition & Performance dataset, made available on Kaggle by <a href="https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset/data" target="_blank">
+  Pavan Subhash T
+</a>
+
+I gratefully acknowledge the dataset provider for making this data accessible for analysis and learning.
 
 ## License
 
