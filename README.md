@@ -81,12 +81,12 @@ The dataset contains detailed employee-level information such as demographics, j
 
 ## Technologies Used
 
-- **Backend**: Python 3.x
-- **Web Framework**: Dash
-- **Visualization**: Plotly
-- **Data Processing**: Pandas, NumPy
-- **Database**: SQLite
-- **Statistical Analysis**: scikit-learn, statsmodels
+- **Backend**: Python 3.10 ![Python](https://img.shields.io/badge/python-3.10-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+- **Web Framework**: Dash ![Dash](https://img.shields.io/badge/Dash-282C34?style=for-the-badge&logo=plotly&logoColor=white)
+- **Visualization**: Plotly ![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)
+- **Data Processing**: Pandas ![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white), NumPy ![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)
+- **Database**: SQLite ![SQLite](https://img.shields.io/badge/SQLite-044A64?style=for-the-badge&logo=sqlite&logoColor=white)
+- **Statistical Analysis**: scikit-learn ![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white), statsmodels ![statsmodels](https://img.shields.io/badge/statsmodels-005C5C?style=for-the-badge&logo=python&logoColor=white)
 
 ## Required Libraries
 
