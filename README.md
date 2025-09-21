@@ -10,6 +10,8 @@
 ![statsmodels](https://img.shields.io/badge/statsmodels-005C5C?style=for-the-badge&logo=python&logoColor=white)
 ![Jupyter](https://img.shields.io/badge/Jupyter-F37626?style=for-the-badge&logo=jupyter&logoColor=white)
 
+**Analyzing employee data to uncover key factors influencing attrition, providing insights for HR strategies.**
+
 ## 📊 About
 
 The Employee Attrition Dashboard is an interactive web application built with Dash and Plotly that provides comprehensive insights into employee attrition patterns within an organization. This dashboard enables HR professionals and managers to:
