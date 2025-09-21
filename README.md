@@ -112,3 +112,9 @@ The dashboard provides actionable insights into employee attrition patterns, hel
 - Identify high-risk departments and job roles
 - Monitor the effectiveness of HR initiatives
 - Make data-driven decisions about workforce management
+
+
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
