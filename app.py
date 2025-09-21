@@ -1,3 +1,11 @@
+#--------------------------------------------------------------
+# Employee Attrition Dashboard using Dash and Plotly
+#--------------------------------------------------------------
+
+
+#--------------------------------------------------------------
+# Import necessary libraries
+#--------------------------------------------------------------
 import dash
 from dash import dcc, html, Input, Output, State, callback_context, dash_table
 import plotly.express as px
@@ -12,7 +20,10 @@ import plotly.figure_factory as ff
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
 app.title = "Employee Attrition Dashboard"
 
-# styling CSS 
+
+#--------------------------------------------------------------
+# styling CSS
+#--------------------------------------------------------------
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -29,7 +40,7 @@ app.index_string = '''
                 padding: 0;
             }
             .navbar {
-                background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+                background: linear-gradient(135deg, #4F008C 0%, #7B3FE4 100%);
                 padding: 15px 30px;
                 color: white;
                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -68,7 +79,7 @@ app.index_string = '''
                 margin-bottom: 30px;
             }
             .btn-primary {
-                background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+                background: linear-gradient(135deg, #4F008C 0%, #7B3FE4 100%);
                 border: none;
                 border-radius: 5px;
                 padding: 10px 20px;
@@ -78,10 +89,10 @@ app.index_string = '''
             }
             .btn-primary:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                box-shadow: 0 4px 8px rgba(79, 0, 140, 0.3);
             }
             .btn-success {
-                background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+                background: linear-gradient(135deg, #4F008C 0%, #7B3FE4 100%);
                 border: none;
                 border-radius: 5px;
                 padding: 10px 20px;
@@ -91,14 +102,14 @@ app.index_string = '''
             }
             .btn-success:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                box-shadow: 0 4px 8px rgba(79, 0, 140, 0.3);
             }
             .form-control {
                 border-radius: 5px;
                 border: 1px solid #ddd;
                 padding: 10px;
                 margin-bottom: 15px;
-                width: 100%;
+                width: 95%;
             }
             .dropdown {
                 margin-bottom: 15px;
@@ -111,7 +122,7 @@ app.index_string = '''
                 margin-bottom: 20px;
             }
             .stats-card {
-                background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+                background: linear-gradient(135deg, #4F008C 0%, #7B3FE4 100%);
                 color: white;
                 border-radius: 10px;
                 padding: 20px;
@@ -140,6 +151,9 @@ app.index_string = '''
 </html>
 '''
 
+#--------------------------------------------------------------
+# Database connection and data loading
+#--------------------------------------------------------------
 # Connect to database
 def get_db_connection():
     try:
@@ -194,6 +208,10 @@ else:
     avg_income = 0
     avg_satisfaction = 0
 
+# --------------------------------------------------------------
+# App Layout and Callbacks
+#--------------------------------------------------------------
+
 # app layout
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -213,6 +231,7 @@ app.layout = html.Div([
 
 # page layout
 overview_layout = html.Div([
+    html.H2('Statistical Overview of Employee Attrition', style={'marginBottom': '30px'}),
     # cards
     html.Div([
         html.Div([
@@ -249,14 +268,23 @@ overview_layout = html.Div([
         html.H3('Overall Company Trends', style={'marginBottom': '20px', 'marginTop': '30px'}),
         html.Div([
             html.Div([
+                html.H4('Job Role Attrition Rate', className='chart-title'),
                 html.Div([
-                    dcc.Graph(id='overall-jobrole-chart')
+                    html.P("This chart shows the attrition rate by job role for the overall company." \
+                " It helps identify which job roles have higher attrition rates.", className='chart-description'),
+                    dcc.Graph(id='overall-jobrole-chart'),
+                    html.P("Sales Representative Attrition Rate is 40 %, making it the highest among all job roles. flowing it Laboratory Technician with 24% and Human Resources with 23%.", className='chart-description'),
                 ], className='chart-container'),
             ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%', 'verticalAlign': 'top'}),
             
             html.Div([
+                html.H4('Attrition Income Distribution', className='chart-title'),
                 html.Div([
-                    dcc.Graph(id='overall-income-chart')
+                    html.P("This chart shows the income distribution by attrition status for the overall company." \
+                " It helps identify whether having higher income levels affects attrition rates.", className='chart-description'),
+                    dcc.Graph(id='overall-income-chart'),
+                    html.P("This graph outlines lower income levels slightly impact attrition rates.", className='chart-description'),
+                    html.Br(),
                 ], className='chart-container'),
             ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
         ]),
@@ -283,14 +311,22 @@ overview_layout = html.Div([
     html.Div([
         # first row 
         html.Div([
+            html.H4('Job Role Attrition Rate', className='chart-title'),
             html.Div([
-                dcc.Graph(id='jobrole-chart')
+                html.P("This chart shows the attrition rate by job role for the selected department. It helps identify which job roles have higher attrition rates, and the order of attrition by job role.", className='chart-description'),
+                dcc.Graph(id='jobrole-chart'),
+                html.Br(),
+                html.Br(),
+                html.Br(),
             ], className='chart-container'),
         ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%', 'verticalAlign': 'top'}),
         
         html.Div([
+            html.H4('Overtime Attrition Rate', className='chart-title'),
             html.Div([
-                dcc.Graph(id='overtime-chart')
+                html.P("This chart shows the attrition rate by overtime status for the selected department. It helps identify whether employees who work overtime have higher attrition rates.", className='chart-description'),
+                dcc.Graph(id='overtime-chart'),
+                html.P("This graph outlines that employees who work overtime tend to have higher attrition rates across all departments.", className='chart-description'),
             ], className='chart-container'),
         ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
     ]),
@@ -298,14 +334,20 @@ overview_layout = html.Div([
     # 2 row 
     html.Div([
         html.Div([
+            html.H4('Marital Status Attrition Rate', className='chart-title'),
             html.Div([
-                dcc.Graph(id='maritalstatus-chart')
+                html.P("This chart shows the attrition rate by marital status for the selected department. It helps identify whether marital status affects attrition rates.", className='chart-description'),
+                dcc.Graph(id='maritalstatus-chart'),
+                html.P("This graph outlines that single employees tend to have higher attrition rates across all departments, except the HR department, where divorced employees have a higher rate.", className='chart-description'),
             ], className='chart-container'),
         ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%', 'verticalAlign': 'top'}),
         
         html.Div([
+            html.H4('Business Travel Attrition Rate', className='chart-title'),
             html.Div([
-                dcc.Graph(id='businesstravel-chart')
+                html.P("This chart shows the attrition rate by business travel frequency for the selected department. It helps identify whether frequent business travel affects attrition rates.", className='chart-description'),
+                dcc.Graph(id='businesstravel-chart'),
+                html.P("This graph outlines that employees who travel frequently for business tend to have higher attrition rates across all departments.", className='chart-description'),
             ], className='chart-container'),
         ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
     ]),
@@ -313,14 +355,30 @@ overview_layout = html.Div([
     # 3 row 
     html.Div([
         html.Div([
+            html.H4('Income Distribution by Attrition Status', className='chart-title'),
             html.Div([
-                dcc.Graph(id='income-chart')
+                html.Br(),
+                html.Br(),
+                html.P("This chart shows the income distribution by attrition status for the selected department. It helps identify whether having higher income levels affects attrition rates.", className='chart-description'),
+                html.Br(),
+                html.Br(),
+                dcc.Graph(id='income-chart'),
+                html.Br(),
+                html.Br(),
+                html.P("This graph outlines that employees across all departments with lower monthly income tend to leave more frequently. But the correlation with attrition rates is not straightforward.", className='chart-description'),
+                html.Br(),
+                html.Br(),
+                html.Br(),
             ], className='chart-container'),
         ], style={'width': '48%', 'display': 'inline-block', 'marginRight': '4%', 'verticalAlign': 'top'}),
         
         html.Div([
+            html.H4('Correlation Heatmap of Key Features', className='chart-title'),
             html.Div([
-                dcc.Graph(id='correlation-heatmap')
+                html.P("This heatmap shows the correlation between key numerical features and attrition. It helps identify which factors are most strongly associated with employees leaving the company.", className='chart-description'),
+                dcc.Graph(id='correlation-heatmap'),
+                html.P("", className='chart-description'),
+                html.P("Job level, Total Working Years, and Age have strong positive correlations among each other, indicating that employees with higher job levels tend to have more years of experience and be older. And all three have a slightly negative correlation with attrition, meaning that as these factors increase, the likelihood of attrition decreases.", className='chart-description'),
             ], className='chart-container'),
         ], style={'width': '48%', 'display': 'inline-block', 'verticalAlign': 'top'}),
     ]),
@@ -404,6 +462,10 @@ def display_page(pathname):
      Output('overall-income-chart', 'figure')],
     [Input('dept-filter', 'value')]
 )
+
+#--------------------------------------------------------------
+# function to update charts based on filter
+#--------------------------------------------------------------
 def update_charts(selected_dept):
     # filter department
     if selected_dept and 'DepartmentName' in df.columns:
@@ -419,7 +481,7 @@ def update_charts(selected_dept):
                              title='Attrition Rate by Job Role',
                              labels={'AttritionRate': 'Attrition Rate (%)', 'JobRole': 'Job Role'},
                              color='AttritionRate',
-                             color_continuous_scale='Blues')
+                             color_continuous_scale=['#E6D7F2', '#C9AFE5', '#AC87D8', '#8F5FCB', '#7237BE', '#550FA1', '#4F008C'])
         jobrole_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         jobrole_fig = go.Figure()
@@ -433,7 +495,7 @@ def update_charts(selected_dept):
                               title='Attrition Rate by Overtime',
                               labels={'AttritionRate': 'Attrition Rate (%)', 'OverTime': 'Overtime'},
                               color='OverTime',
-                              color_discrete_map={'Yes': '#e74c3c', 'No': '#2ecc71'})
+                              color_discrete_map={'Yes': '#FF375E', 'No': '#4F008C'})
         overtime_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         overtime_fig = go.Figure()
@@ -447,7 +509,7 @@ def update_charts(selected_dept):
                              title='Attrition Rate by Marital Status',
                              labels={'AttritionRate': 'Attrition Rate (%)', 'MaritalStatus': 'Marital Status'},
                              color='MaritalStatus',
-                             color_discrete_map={'Single': '#3498db', 'Married': '#2ecc71', 'Divorced': '#e74c3c'})
+                             color_discrete_map={'Single': '#FF375E', 'Married': '#4F008C', 'Divorced': '#AC87D8'})
         marital_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         marital_fig = go.Figure()
@@ -461,7 +523,7 @@ def update_charts(selected_dept):
                             title='Attrition Rate by Business Travel',
                             labels={'AttritionRate': 'Attrition Rate (%)', 'BusinessTravel': 'Business Travel'},
                             color='BusinessTravel',
-                            color_discrete_map={'Travel_Frequently': '#e74c3c', 'Travel_Rarely': '#f39c12', 'Non-Travel': '#2ecc71'})
+                            color_discrete_map={'Travel_Frequently': '#FF375E', 'Travel_Rarely': '#4F008C', 'Non-Travel': '#AC87D8'})
         travel_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         travel_fig = go.Figure()
@@ -472,7 +534,7 @@ def update_charts(selected_dept):
         income_fig = px.violin(filtered_df, x='Attrition', y='MonthlyIncome', 
                                title='Income Distribution by Attrition Status',
                                color='Attrition',
-                               color_discrete_map={'Yes': '#e74c3c', 'No': '#2ecc71'})
+                               color_discrete_map={'Yes': '#FF375E', 'No': '#4F008C'})
         income_fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         income_fig = go.Figure()
@@ -491,7 +553,7 @@ def update_charts(selected_dept):
             z=corr_matrix.values,
             x=corr_matrix.columns.tolist(),
             y=corr_matrix.index.tolist(),
-            colorscale='RdBu_r',
+            colorscale=['#E6D7F2', '#C9AFE5', '#AC87D8', '#8F5FCB', '#7237BE', '#550FA1', '#4F008C'],
             zmin=-1,
             zmax=1,
             hoverongaps=False,
@@ -532,7 +594,7 @@ def update_charts(selected_dept):
                                      title='Overall Attrition Rate by Job Role (Company-wide)',
                                      labels={'AttritionRate': 'Attrition Rate (%)', 'JobRole': 'Job Role'},
                                      color='AttritionRate',
-                                     color_continuous_scale='Reds')
+                                     color_continuous_scale=['#FFD1D9', '#FFA3B0', '#FF7587', '#FF375E', '#E62E4D', '#CC263D', '#B31D2C'])
         overall_jobrole_fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         overall_jobrole_fig = go.Figure()
@@ -543,7 +605,7 @@ def update_charts(selected_dept):
         overall_income_fig = px.violin(df, x='Attrition', y='MonthlyIncome', 
                                        title='Overall Income Distribution by Attrition Status (Company-wide)',
                                        color='Attrition',
-                                       color_discrete_map={'Yes': '#e74c3c', 'No': '#2ecc71'})
+                                       color_discrete_map={'Yes': '#FF375E', 'No': '#4F008C'})
         overall_income_fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     else:
         overall_income_fig = go.Figure()
@@ -565,6 +627,10 @@ def update_charts(selected_dept):
      State('employee-id', 'value'),
      State('update-income', 'value')]
 )
+
+#--------------------------------------------------------------
+# function to handle form submissions
+#--------------------------------------------------------------
 def handle_form_submissions(add_clicks, update_clicks, new_dept, new_jobrole, new_income, new_overtime, emp_id, update_income):
     ctx = callback_context
     if not ctx.triggered:
@@ -640,6 +706,10 @@ def handle_form_submissions(add_clicks, update_clicks, new_dept, new_jobrole, ne
     
     return "", get_employee_table()
 
+
+#--------------------------------------------------------------
+# Helper function to create employee table
+#--------------------------------------------------------------
 # def get employee table
 def get_employee_table():
     conn = get_db_connection()
@@ -673,7 +743,7 @@ def get_employee_table():
                 data=employees_df.to_dict('records'),
                 style_table={'overflowX': 'auto'},
                 style_header={
-                    'backgroundColor': '#2c3e50',
+                    'backgroundColor': '#4F008C',
                     'color': 'white',
                     'fontWeight': 'bold'
                 },
@@ -693,5 +763,6 @@ def get_employee_table():
             return html.Div(f"Error loading employee data: {str(e)}")
     return html.Div("Database connection failed")
 
+# run app
 if __name__ == '__main__':
     app.run(debug=True)
