@@ -12,7 +12,32 @@
 
 **Analyzing employee data to uncover key factors influencing attrition, providing insights for HR strategies.**
 
-## 📊 About
+## Table of Contents
+- [Visual Demo](#visual-demo)
+  - [Employee Attrition Dashboard](#employee-attrition-dashboard)
+  - [Employee Management page](#employee-management-page)
+- [Overview](#overview)
+- [Data Source & Dictionary](#data-source--dictionary)
+- [Features](#features)
+- [Technologies Used](#technologies-used)
+- [Required Libraries](#required-libraries)
+- [Database Schema](#database-schema)
+- [How to Run](#how-to-run)
+- [Key Insights](#key-insights)
+- [Project Structure](#project-structure)
+- [Results](#results)
+- [Author & Acknowledgments](#author--acknowledgments)
+- [License](#license)
+
+## Visual Demo
+### Employee Attrition Dashboard
+![Demo 1](demo/Dashboard.gif)
+
+### Employee Management page
+![Demo 2](demo/EmployeeManagement.gif)
+
+
+## Overview
 
 The Employee Attrition Dashboard is an interactive web application built with Dash and Plotly that provides comprehensive insights into employee attrition patterns within an organization. This dashboard enables HR professionals and managers to:
 
@@ -22,14 +47,39 @@ The Employee Attrition Dashboard is an interactive web application built with Da
 
 The application connects to an SQLite database containing employee information and provides both analytical visualizations and data management capabilities.
 
-## 🚀 Features
+## Data Source & Dictionary
+**Data Source**  
+This project uses the [IBM HR Analytics Employee Attrition & Performance dataset](https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset/data), available on Kaggle.  
+The dataset contains detailed employee-level information such as demographics, job role, performance, and attrition status.  
+
+**Data Dictionary (Key Columns)**  
+
+- **Attrition**: Whether an employee left the company (Yes/No).  
+- **Age**: Age of the employee.  
+- **BusinessTravel**: Frequency of business travel (Non-Travel, Travel_Rarely, Travel_Frequently).  
+- **Department**: Department the employee belongs to (Sales, Research & Development, Human Resources).  
+- **EducationField**: Field of study of the employee (Life Sciences, Medical, Marketing, Technical Degree, etc.).  
+- **Gender**: Gender of the employee.  
+- **JobRole**: Job title/position of the employee.  
+- **MaritalStatus**: Marital status (Single, Married, Divorced).  
+- **MonthlyIncome**: Monthly salary.  
+- **NumCompaniesWorked**: Number of companies the employee has worked at before.  
+- **OverTime**: Whether the employee works overtime (Yes/No).  
+- **PerformanceRating**: Performance rating score.  
+- **TotalWorkingYears**: Total years of professional experience.  
+- **YearsAtCompany**: Number of years the employee has been at the company.  
+- **YearsInCurrentRole**: Number of years the employee has been in the current role.  
+- **YearsSinceLastPromotion**: Years since the employee’s last promotion.  
+- **YearsWithCurrManager**: Number of years the employee has been with their current manager.  
+
+## Features
 
 - **Interactive Visualizations**: Bar charts, violin plots, and heatmaps showing attrition patterns
 - **Department Filtering**: Analyze attrition by specific departments
 - **Employee Management**: Add new employees and update existing records
 - **Responsive Design**: Clean, modern UI with custom styling
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 - **Backend**: Python 3.x
 - **Web Framework**: Dash
@@ -38,7 +88,7 @@ The application connects to an SQLite database containing employee information a
 - **Database**: SQLite
 - **Statistical Analysis**: scikit-learn, statsmodels
 
-## 📋 Required Libraries
+## Required Libraries
 
 To run this project, you need to install the following Python packages:
 
@@ -51,7 +101,7 @@ pip install scikit-learn
 pip install statsmodels
 ```
 
-## 🗄️ Database Schema
+## Database Schema
 The application expects an SQLite database (`employee_database.db`) with the following tables:
 
 - Employees (EmployeeID, DepartmentID, JobID, MonthlyIncome, OverTime, Attrition, etc.)
@@ -60,7 +110,7 @@ The application expects an SQLite database (`employee_database.db`) with the fol
 - EducationFields (EducationFieldID, FieldName)
 <img src="db/ERdiagram.png" alt="ER Diagram" width="600"/>
 
-## 🏃‍♂️ How to Run
+## How to Run
 1. Clone the repository:
 ```bash
 git clone <repository-url>
@@ -69,7 +119,7 @@ cd <repository-directory>
 
 2. Install required dependencies:
 ```bash
-pip install dash plotly pandas numpy scikit-learn statsmodels
+pip install -r requirements.txt
 ```
 3. Run the application:
 ```bash
@@ -80,7 +130,7 @@ python app.py
 Open your web browser and navigate to `http://127.0.0.1:8050/`
 
 
-## 📊 Key Insights
+## Key Insights
 Based on the analysis performed:
 
 1. Primary Factors Influencing Attrition:
@@ -105,7 +155,7 @@ Based on the analysis performed:
     - Training Times Last Year
     - Relationship Satisfaction
 
-## 📁 Project Structure
+## Project Structure
 ```text
 ├── app.py                 # Main Dash application
 ├── data/
@@ -114,11 +164,18 @@ Based on the analysis performed:
 ├── db/
 │   │── employee_database.db  # SQLite database file
 │   └── ERdiagram.png  # Er diagram image
-├── Employee Attrition notebook.ipynb # Notebook
+├── notebooks/
+│   └── Employee Attrition notebook.ipynb # Notebook
+├── demo/
+│   │── Dashboard.gif  
+│   └── EmployeeManagement.gif
+├── requirements.txt
+├── LICENSE
+├── .gitignore
 └── README.md             # Project documentation
 ```
 
-## 📈 Results
+## Results
 The dashboard provides actionable insights into employee attrition patterns, helping organizations:
 
 - Identify high-risk departments and job roles
