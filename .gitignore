@@ -1,0 +1,12 @@
+# Python
+.python-version
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Database files
+db/*.db
+
+# Environment variables
+.env
